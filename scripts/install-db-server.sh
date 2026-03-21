@@ -58,8 +58,8 @@ END
 \$\$;
 SQL
 
-sudo -u postgres createdb --owner="$PG_USER" "$PG_DB" 2>/dev/null || \
-    echo "Database '$PG_DB' already exists, skipping."
+sudo -u postgres dropdb --if-exists "$PG_DB"
+sudo -u postgres createdb --owner="$PG_USER" "$PG_DB"
 
 # ---------------------------------------------------------------------------
 # Schema
