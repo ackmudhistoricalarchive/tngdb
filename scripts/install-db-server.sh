@@ -64,7 +64,7 @@ sudo -u postgres createdb --owner="$PG_USER" "$PG_DB" 2>/dev/null || \
 # ---------------------------------------------------------------------------
 # Schema
 # ---------------------------------------------------------------------------
-sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$PG_DB" -f "$SCHEMA"
+sudo -u postgres psql -v ON_ERROR_STOP=1 -d "$PG_DB" < "$SCHEMA"
 
 # ---------------------------------------------------------------------------
 # Permissions
