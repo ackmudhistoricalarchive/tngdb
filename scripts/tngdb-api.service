@@ -20,7 +20,7 @@ SyslogIdentifier=tngdb-api
 NoNewPrivileges=true
 PrivateTmp=true
 ProtectSystem=strict
-ProtectHome=true
+ProtectHome=read-only
 ReadWritePaths=/opt/tngdb
 
 [Install]
