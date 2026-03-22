@@ -314,10 +314,11 @@ CREATE TABLE rulers (
 );
 
 CREATE TABLE brands (
-    id           SERIAL  PRIMARY KEY,
-    owner        TEXT    NOT NULL,
-    obj_vnum     INTEGER NOT NULL,
-    timestamp    TEXT    NOT NULL DEFAULT ''
+    id           SERIAL PRIMARY KEY,
+    branded_by   TEXT   NOT NULL,
+    item_name    TEXT   NOT NULL,
+    brand_date   TEXT   NOT NULL DEFAULT '',
+    description  TEXT   NOT NULL DEFAULT ''
 );
 
 CREATE TABLE room_marks (
@@ -389,6 +390,51 @@ CREATE TABLE players (
 );
 
 -- ---------------------------------------------------------------------------
+-- Keep chests (player item storage, introduced in acktng PR #913)
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE keep_chests (
+    id           SERIAL  PRIMARY KEY,
+    vnum         INTEGER NOT NULL UNIQUE,
+    owner_name   TEXT    NOT NULL,
+    max_items    INTEGER NOT NULL DEFAULT 50,
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    updated_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE keep_chest_items (
+    id           SERIAL  PRIMARY KEY,
+    chest_id     INTEGER NOT NULL REFERENCES keep_chests(id) ON DELETE CASCADE,
+    nest         INTEGER NOT NULL DEFAULT 0,
+    parent_id    INTEGER REFERENCES keep_chest_items(id),
+    name         TEXT    NOT NULL,
+    short_descr  TEXT    NOT NULL,
+    description  TEXT    NOT NULL,
+    vnum         INTEGER NOT NULL DEFAULT 0,
+    extra_flags  BIGINT  NOT NULL DEFAULT 0,
+    wear_flags   INTEGER NOT NULL DEFAULT 0,
+    wear_loc     INTEGER NOT NULL DEFAULT -1,
+    class_flags  INTEGER NOT NULL DEFAULT 0,
+    item_type    INTEGER NOT NULL DEFAULT 0,
+    weight       INTEGER NOT NULL DEFAULT 0,
+    level        INTEGER NOT NULL DEFAULT 0,
+    timer        INTEGER NOT NULL DEFAULT -1,
+    cost         INTEGER NOT NULL DEFAULT 0,
+    value_0      INTEGER NOT NULL DEFAULT 0,
+    value_1      INTEGER NOT NULL DEFAULT 0,
+    value_2      INTEGER NOT NULL DEFAULT 0,
+    value_3      INTEGER NOT NULL DEFAULT 0,
+    value_4      INTEGER NOT NULL DEFAULT 0,
+    value_5      INTEGER NOT NULL DEFAULT 0,
+    value_6      INTEGER NOT NULL DEFAULT 0,
+    value_7      INTEGER NOT NULL DEFAULT 0,
+    value_8      INTEGER NOT NULL DEFAULT 0,
+    value_9      INTEGER NOT NULL DEFAULT 0,
+    objfun       TEXT,
+    sort_order   INTEGER NOT NULL DEFAULT 0
+);
+
+-- ---------------------------------------------------------------------------
 -- Indexes
 -- ---------------------------------------------------------------------------
 
@@ -423,3 +469,5 @@ INSERT INTO schema_version (version, description)
     VALUES (2, 'Align schema with database-schema-areas proposal');
 INSERT INTO schema_version (version, description)
     VALUES (3, 'Add stored tsvector columns for weighted full-text search');
+INSERT INTO schema_version (version, description)
+    VALUES (4, 'Align brands with acktng canonical schema (brand_date TEXT per PR #920); add keep_chests tables');
