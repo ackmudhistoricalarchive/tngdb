@@ -9,12 +9,16 @@ Run:
     uvicorn api.main:app [--host 0.0.0.0 --port 8000]
 """
 
+import asyncio
+import logging
 import os
 from contextlib import asynccontextmanager
 from typing import List, Optional
 
 import asyncpg
 from fastapi import FastAPI, HTTPException, Query
+
+logger = logging.getLogger(__name__)
 from pydantic import BaseModel
 
 
@@ -35,7 +39,21 @@ def _database_url() -> str:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global _pool
-    _pool = await asyncpg.create_pool(_database_url())
+    url = _database_url()
+    delay = 1
+    for attempt in range(10):
+        try:
+            _pool = await asyncpg.create_pool(url)
+            break
+        except Exception as exc:
+            if attempt == 9:
+                raise
+            logger.warning(
+                "Database not ready (attempt %d/10): %s — retrying in %ds",
+                attempt + 1, exc, delay,
+            )
+            await asyncio.sleep(delay)
+            delay = min(delay * 2, 30)
     yield
     await _pool.close()
 
