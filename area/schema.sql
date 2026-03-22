@@ -57,56 +57,57 @@ CREATE TABLE room_extra_descs (
 );
 
 CREATE TABLE mobiles (
-    vnum         INTEGER PRIMARY KEY,
-    area_id      INTEGER NOT NULL REFERENCES areas(id),
-    player_name  TEXT    NOT NULL,
-    short_descr  TEXT    NOT NULL,
-    long_descr   TEXT    NOT NULL,
-    description  TEXT    NOT NULL,
-    act_flags    BIGINT  NOT NULL DEFAULT 0,
-    affected_by  INTEGER NOT NULL DEFAULT 0,
-    alignment    INTEGER NOT NULL DEFAULT 0,
-    level        INTEGER NOT NULL DEFAULT 1,
-    sex          INTEGER NOT NULL DEFAULT 0,
-    hp_mod       INTEGER NOT NULL DEFAULT 0,
-    ac_mod       INTEGER NOT NULL DEFAULT 0,
-    hr_mod       INTEGER NOT NULL DEFAULT 0,
-    dr_mod       INTEGER NOT NULL DEFAULT 0,
-    class        INTEGER NOT NULL DEFAULT 0,
-    clan         INTEGER NOT NULL DEFAULT 0,
-    race         INTEGER NOT NULL DEFAULT 0,
-    position     INTEGER NOT NULL DEFAULT 0,
-    skills       INTEGER NOT NULL DEFAULT 0,
-    "cast"       INTEGER NOT NULL DEFAULT 0,
-    def          INTEGER NOT NULL DEFAULT 0,
-    strong_magic INTEGER NOT NULL DEFAULT 0,
-    weak_magic   INTEGER NOT NULL DEFAULT 0,
-    race_mods    INTEGER NOT NULL DEFAULT 0,
-    power_skills INTEGER NOT NULL DEFAULT 0,
-    power_cast   INTEGER NOT NULL DEFAULT 0,
-    resist       INTEGER NOT NULL DEFAULT 0,
-    suscept      INTEGER NOT NULL DEFAULT 0,
-    spellpower   INTEGER NOT NULL DEFAULT 0,
-    crit         INTEGER NOT NULL DEFAULT 0,
-    crit_mult    INTEGER NOT NULL DEFAULT 0,
-    spell_crit   INTEGER NOT NULL DEFAULT 0,
-    spell_mult   INTEGER NOT NULL DEFAULT 0,
-    parry        INTEGER NOT NULL DEFAULT 0,
-    dodge        INTEGER NOT NULL DEFAULT 0,
-    block        INTEGER NOT NULL DEFAULT 0,
-    pierce       INTEGER NOT NULL DEFAULT 0,
-    ai_knowledge INTEGER NOT NULL DEFAULT 0,
-    ai_prompt    TEXT,
-    loot_amount  INTEGER NOT NULL DEFAULT 0,
-    loot_0       INTEGER NOT NULL DEFAULT 0,
-    loot_1       INTEGER NOT NULL DEFAULT 0,
-    loot_2       INTEGER NOT NULL DEFAULT 0,
-    loot_3       INTEGER NOT NULL DEFAULT 0,
-    loot_4       INTEGER NOT NULL DEFAULT 0,
-    loot_5       INTEGER NOT NULL DEFAULT 0,
-    loot_6       INTEGER NOT NULL DEFAULT 0,
-    loot_7       INTEGER NOT NULL DEFAULT 0,
-    loot_8       INTEGER NOT NULL DEFAULT 0,
+    vnum          INTEGER PRIMARY KEY,
+    area_id       INTEGER NOT NULL REFERENCES areas(id),
+    player_name   TEXT    NOT NULL,
+    short_descr   TEXT    NOT NULL,
+    long_descr    TEXT    NOT NULL,
+    description   TEXT    NOT NULL,
+    act_flags     BIGINT  NOT NULL DEFAULT 0,
+    affected_by   INTEGER NOT NULL DEFAULT 0,
+    alignment     INTEGER NOT NULL DEFAULT 0,
+    level         INTEGER NOT NULL DEFAULT 1,
+    sex           INTEGER NOT NULL DEFAULT 0,
+    hp_mod        INTEGER NOT NULL DEFAULT 0,
+    ac_mod        INTEGER NOT NULL DEFAULT 0,
+    hr_mod        INTEGER NOT NULL DEFAULT 0,
+    dr_mod        INTEGER NOT NULL DEFAULT 0,
+    class         INTEGER NOT NULL DEFAULT 0,
+    clan          INTEGER NOT NULL DEFAULT 0,
+    race          INTEGER NOT NULL DEFAULT 0,
+    position      INTEGER NOT NULL DEFAULT 0,
+    skills        INTEGER NOT NULL DEFAULT 0,
+    "cast"        INTEGER NOT NULL DEFAULT 0,
+    def           INTEGER NOT NULL DEFAULT 0,
+    strong_magic  INTEGER NOT NULL DEFAULT 0,
+    weak_magic    INTEGER NOT NULL DEFAULT 0,
+    race_mods     INTEGER NOT NULL DEFAULT 0,
+    power_skills  INTEGER NOT NULL DEFAULT 0,
+    power_cast    INTEGER NOT NULL DEFAULT 0,
+    resist        INTEGER NOT NULL DEFAULT 0,
+    suscept       INTEGER NOT NULL DEFAULT 0,
+    spellpower    INTEGER NOT NULL DEFAULT 0,
+    crit          INTEGER NOT NULL DEFAULT 0,
+    crit_mult     INTEGER NOT NULL DEFAULT 0,
+    spell_crit    INTEGER NOT NULL DEFAULT 0,
+    spell_mult    INTEGER NOT NULL DEFAULT 0,
+    parry         INTEGER NOT NULL DEFAULT 0,
+    dodge         INTEGER NOT NULL DEFAULT 0,
+    block         INTEGER NOT NULL DEFAULT 0,
+    pierce        INTEGER NOT NULL DEFAULT 0,
+    ai_knowledge  INTEGER NOT NULL DEFAULT 0,
+    accent        TEXT,
+    ai_prompt     TEXT,
+    loot_amount   INTEGER NOT NULL DEFAULT 0,
+    loot_0        INTEGER NOT NULL DEFAULT 0,
+    loot_1        INTEGER NOT NULL DEFAULT 0,
+    loot_2        INTEGER NOT NULL DEFAULT 0,
+    loot_3        INTEGER NOT NULL DEFAULT 0,
+    loot_4        INTEGER NOT NULL DEFAULT 0,
+    loot_5        INTEGER NOT NULL DEFAULT 0,
+    loot_6        INTEGER NOT NULL DEFAULT 0,
+    loot_7        INTEGER NOT NULL DEFAULT 0,
+    loot_8        INTEGER NOT NULL DEFAULT 0,
     loot_chance_0 INTEGER NOT NULL DEFAULT 0,
     loot_chance_1 INTEGER NOT NULL DEFAULT 0,
     loot_chance_2 INTEGER NOT NULL DEFAULT 0,
@@ -190,6 +191,12 @@ CREATE TABLE mobile_specials (
     spec_name    TEXT    NOT NULL
 );
 
+-- Per-mobile AI script storage (extended prompts beyond the inline ai_prompt)
+CREATE TABLE mob_scripts (
+    mob_vnum     INTEGER PRIMARY KEY REFERENCES mobiles(vnum),
+    prompt       TEXT    NOT NULL DEFAULT ''
+);
+
 CREATE TABLE object_functions (
     obj_vnum     INTEGER PRIMARY KEY REFERENCES objects(vnum),
     func_name    TEXT    NOT NULL
@@ -201,18 +208,18 @@ CREATE TABLE object_functions (
 
 CREATE TABLE help_entries (
     id           SERIAL  PRIMARY KEY,
-    filename     TEXT    NOT NULL UNIQUE,
-    level        INTEGER NOT NULL,
-    keywords     TEXT    NOT NULL,
-    body         TEXT    NOT NULL
+    keyword      TEXT    NOT NULL,
+    title        TEXT    NOT NULL DEFAULT '',
+    level        INTEGER NOT NULL DEFAULT 0,
+    text         TEXT    NOT NULL
 );
 
 CREATE TABLE shelp_entries (
     id           SERIAL  PRIMARY KEY,
-    filename     TEXT    NOT NULL UNIQUE,
-    level        INTEGER NOT NULL,
-    keywords     TEXT    NOT NULL,
-    body         TEXT    NOT NULL
+    keyword      TEXT    NOT NULL,
+    title        TEXT    NOT NULL DEFAULT '',
+    level        INTEGER NOT NULL DEFAULT 0,
+    text         TEXT    NOT NULL
 );
 
 -- ---------------------------------------------------------------------------
@@ -221,16 +228,17 @@ CREATE TABLE shelp_entries (
 
 CREATE TABLE lore_topics (
     id           SERIAL PRIMARY KEY,
-    filename     TEXT   NOT NULL UNIQUE,
-    keywords     TEXT   NOT NULL
+    name         TEXT   NOT NULL UNIQUE,
+    keyword      TEXT   NOT NULL,
+    description  TEXT   NOT NULL DEFAULT ''
 );
 
 CREATE TABLE lore_entries (
     id           SERIAL  PRIMARY KEY,
     topic_id     INTEGER NOT NULL REFERENCES lore_topics(id),
     seq          INTEGER NOT NULL,
-    flags        BIGINT  NOT NULL DEFAULT 0,
-    body         TEXT    NOT NULL,
+    keyword      TEXT    NOT NULL DEFAULT '',
+    text         TEXT    NOT NULL,
     UNIQUE(topic_id, seq)
 );
 
@@ -240,9 +248,10 @@ CREATE TABLE lore_entries (
 
 CREATE TABLE bans (
     id           SERIAL  PRIMARY KEY,
-    ban_type     INTEGER NOT NULL DEFAULT 0,
-    address      TEXT    NOT NULL,
-    banned_by    TEXT    NOT NULL DEFAULT ''
+    type         INTEGER NOT NULL DEFAULT 0,
+    value        TEXT    NOT NULL,
+    reason       TEXT    NOT NULL DEFAULT '',
+    date         TEXT    NOT NULL DEFAULT ''
 );
 
 CREATE TABLE socials (
@@ -257,78 +266,65 @@ CREATE TABLE socials (
     others_auto   TEXT   NOT NULL DEFAULT ''
 );
 
+CREATE TABLE boards (
+    id           SERIAL  PRIMARY KEY,
+    obj_vnum     INTEGER NOT NULL,
+    name         TEXT    NOT NULL,
+    read_level   INTEGER NOT NULL DEFAULT 0,
+    post_level   INTEGER NOT NULL DEFAULT 0
+);
+
+CREATE TABLE board_messages (
+    id           SERIAL  PRIMARY KEY,
+    board_id     INTEGER NOT NULL REFERENCES boards(id),
+    author       TEXT    NOT NULL DEFAULT '',
+    timestamp    TEXT    NOT NULL DEFAULT '',
+    subject      TEXT    NOT NULL DEFAULT '',
+    text         TEXT    NOT NULL DEFAULT ''
+);
+
 CREATE TABLE clans (
-    id            INTEGER   PRIMARY KEY,
-    name          TEXT      NOT NULL DEFAULT '',
-    war_count     INTEGER   NOT NULL DEFAULT 0,
-    win_count     INTEGER   NOT NULL DEFAULT 0,
-    loss_count    INTEGER   NOT NULL DEFAULT 0,
-    member_count  INTEGER   NOT NULL DEFAULT 0,
-    gold          INTEGER   NOT NULL DEFAULT 0,
-    war_matrix    INTEGER[] NOT NULL DEFAULT '{}'
+    id           INTEGER PRIMARY KEY,
+    name         TEXT    NOT NULL DEFAULT '',
+    leader       TEXT    NOT NULL DEFAULT '',
+    treasury     INTEGER NOT NULL DEFAULT 0,
+    flags        INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE rulers (
-    id           SERIAL PRIMARY KEY,
-    name         TEXT   NOT NULL UNIQUE
+    id           SERIAL  PRIMARY KEY,
+    clan_id      INTEGER NOT NULL REFERENCES clans(id),
+    position     TEXT    NOT NULL,
+    player_name  TEXT    NOT NULL
 );
 
 CREATE TABLE brands (
-    id           SERIAL PRIMARY KEY,
-    branded_by   TEXT   NOT NULL,
-    item_name    TEXT   NOT NULL,
-    brand_date   TEXT   NOT NULL,
-    description  TEXT   NOT NULL DEFAULT ''
+    id           SERIAL  PRIMARY KEY,
+    owner        TEXT    NOT NULL,
+    obj_vnum     INTEGER NOT NULL,
+    timestamp    TEXT    NOT NULL DEFAULT ''
 );
 
 CREATE TABLE room_marks (
     id           SERIAL  PRIMARY KEY,
     room_vnum    INTEGER NOT NULL,
+    player_name  TEXT    NOT NULL DEFAULT '',
     mark_text    TEXT    NOT NULL
 );
 
 CREATE TABLE corpses (
     id           SERIAL  PRIMARY KEY,
-    where_vnum   INTEGER NOT NULL,
-    nest         INTEGER NOT NULL DEFAULT 0,
-    name         TEXT    NOT NULL,
-    short_descr  TEXT    NOT NULL,
-    description  TEXT    NOT NULL,
-    vnum         INTEGER NOT NULL DEFAULT 0,
-    extra_flags  BIGINT  NOT NULL DEFAULT 0,
-    wear_flags   INTEGER NOT NULL DEFAULT 0,
-    wear_loc     INTEGER NOT NULL DEFAULT -1,
-    class_flags  INTEGER NOT NULL DEFAULT 0,
-    item_type    INTEGER NOT NULL DEFAULT 0,
-    weight       INTEGER NOT NULL DEFAULT 0,
-    level        INTEGER NOT NULL DEFAULT 0,
-    timer        INTEGER NOT NULL DEFAULT 0,
-    cost         INTEGER NOT NULL DEFAULT 0,
-    value_0      INTEGER NOT NULL DEFAULT 0,
-    value_1      INTEGER NOT NULL DEFAULT 0,
-    value_2      INTEGER NOT NULL DEFAULT 0,
-    value_3      INTEGER NOT NULL DEFAULT 0,
-    parent_id    INTEGER REFERENCES corpses(id)
+    obj_vnum     INTEGER NOT NULL DEFAULT 0,
+    owner        TEXT    NOT NULL DEFAULT '',
+    room_vnum    INTEGER NOT NULL,
+    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    contents     JSONB   NOT NULL DEFAULT '[]'
 );
 
+-- Key-value store for global server state and messages
 CREATE TABLE sysdata (
-    id           INTEGER PRIMARY KEY DEFAULT 1 CHECK(id = 1),
-    mud_name     TEXT    NOT NULL DEFAULT '',
-    admin_email  TEXT    NOT NULL DEFAULT '',
-    login_msg    TEXT    NOT NULL DEFAULT '',
-    motd         TEXT    NOT NULL DEFAULT '',
-    welcome      TEXT    NOT NULL DEFAULT '',
-    news         TEXT    NOT NULL DEFAULT '',
-    int_val_1    INTEGER NOT NULL DEFAULT 0,
-    int_val_2    INTEGER NOT NULL DEFAULT 0,
-    bln_val_0    INTEGER NOT NULL DEFAULT 0,
-    bln_val_1    INTEGER NOT NULL DEFAULT 0,
-    bln_val_2    INTEGER NOT NULL DEFAULT 0,
-    bln_val_3    INTEGER NOT NULL DEFAULT 0,
-    bln_val_4    INTEGER NOT NULL DEFAULT 0,
-    bln_val_5    INTEGER NOT NULL DEFAULT 0,
-    bln_val_6    INTEGER NOT NULL DEFAULT 0,
-    bln_val_7    INTEGER NOT NULL DEFAULT 0
+    key          TEXT PRIMARY KEY,
+    value        TEXT NOT NULL DEFAULT ''
 );
 
 -- ---------------------------------------------------------------------------
@@ -390,21 +386,23 @@ CREATE INDEX ON object_extra_descs(obj_vnum);
 CREATE INDEX ON object_affects(obj_vnum);
 CREATE INDEX ON resets(area_id, seq);
 CREATE INDEX ON lore_entries(topic_id);
-CREATE INDEX ON corpses(where_vnum);
-CREATE INDEX ON corpses(parent_id);
+CREATE INDEX ON board_messages(board_id);
+CREATE INDEX ON corpses(room_vnum);
 
 -- Full-text keyword search for help/shelp/lore
-CREATE INDEX ON help_entries  USING GIN (to_tsvector('english', keywords));
-CREATE INDEX ON shelp_entries USING GIN (to_tsvector('english', keywords));
-CREATE INDEX ON lore_topics   USING GIN (to_tsvector('english', keywords));
+CREATE INDEX ON help_entries  USING GIN (to_tsvector('english', keyword));
+CREATE INDEX ON shelp_entries USING GIN (to_tsvector('english', keyword));
+CREATE INDEX ON lore_topics   USING GIN (to_tsvector('english', keyword));
 
 -- ---------------------------------------------------------------------------
 -- Schema version
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE schema_version (
-    version    INTEGER                  NOT NULL,
-    applied_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+    version     INTEGER                  NOT NULL,
+    applied_at  TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    description TEXT                     NOT NULL DEFAULT ''
 );
 
-INSERT INTO schema_version (version) VALUES (1);
+INSERT INTO schema_version (version, description)
+    VALUES (2, 'Align schema with database-schema-areas proposal');
