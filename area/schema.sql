@@ -96,7 +96,7 @@ CREATE TABLE mobiles (
     block         INTEGER NOT NULL DEFAULT 0,
     pierce        INTEGER NOT NULL DEFAULT 0,
     ai_knowledge  INTEGER NOT NULL DEFAULT 0,
-    accent        TEXT,
+    accent        INTEGER NOT NULL DEFAULT 0,
     ai_prompt     TEXT,
     loot_amount   INTEGER NOT NULL DEFAULT 0,
     loot_0        INTEGER NOT NULL DEFAULT 0,
@@ -191,15 +191,20 @@ CREATE TABLE mobile_specials (
     spec_name    TEXT    NOT NULL
 );
 
--- Per-mobile AI script storage (extended prompts beyond the inline ai_prompt)
+-- Per-mobile AI script steps (trigger-based, sequence-ordered)
 CREATE TABLE mob_scripts (
-    mob_vnum     INTEGER PRIMARY KEY REFERENCES mobiles(vnum),
-    prompt       TEXT    NOT NULL DEFAULT ''
+    id       SERIAL  PRIMARY KEY,
+    mob_vnum INTEGER NOT NULL REFERENCES mobiles(vnum),
+    seq      INTEGER NOT NULL,
+    trigger  TEXT    NOT NULL,
+    args     TEXT    NOT NULL DEFAULT '',
+    commands TEXT    NOT NULL,
+    UNIQUE(mob_vnum, seq)
 );
 
 CREATE TABLE object_functions (
     obj_vnum     INTEGER PRIMARY KEY REFERENCES objects(vnum),
-    func_name    TEXT    NOT NULL
+    fun_name     TEXT    NOT NULL
 );
 
 -- ---------------------------------------------------------------------------
@@ -207,29 +212,19 @@ CREATE TABLE object_functions (
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE help_entries (
-    id           SERIAL  PRIMARY KEY,
-    keyword      TEXT    NOT NULL,
-    title        TEXT    NOT NULL DEFAULT '',
-    level        INTEGER NOT NULL DEFAULT 0,
-    text         TEXT    NOT NULL,
-    textsearch   tsvector GENERATED ALWAYS AS (
-                       setweight(to_tsvector('english', coalesce(keyword, '')), 'A')
-                    || setweight(to_tsvector('english', coalesce(title,   '')), 'B')
-                    || setweight(to_tsvector('english', coalesce(text,    '')), 'C')
-                 ) STORED
+    id       SERIAL  PRIMARY KEY,
+    filename TEXT    NOT NULL UNIQUE,
+    level    INTEGER NOT NULL,
+    keywords TEXT    NOT NULL,
+    body     TEXT    NOT NULL
 );
 
 CREATE TABLE shelp_entries (
-    id           SERIAL  PRIMARY KEY,
-    keyword      TEXT    NOT NULL,
-    title        TEXT    NOT NULL DEFAULT '',
-    level        INTEGER NOT NULL DEFAULT 0,
-    text         TEXT    NOT NULL,
-    textsearch   tsvector GENERATED ALWAYS AS (
-                       setweight(to_tsvector('english', coalesce(keyword, '')), 'A')
-                    || setweight(to_tsvector('english', coalesce(title,   '')), 'B')
-                    || setweight(to_tsvector('english', coalesce(text,    '')), 'C')
-                 ) STORED
+    id       SERIAL  PRIMARY KEY,
+    filename TEXT    NOT NULL UNIQUE,
+    level    INTEGER NOT NULL,
+    keywords TEXT    NOT NULL,
+    body     TEXT    NOT NULL
 );
 
 -- ---------------------------------------------------------------------------
@@ -237,23 +232,17 @@ CREATE TABLE shelp_entries (
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE lore_topics (
-    id           SERIAL PRIMARY KEY,
-    name         TEXT   NOT NULL UNIQUE,
-    keyword      TEXT   NOT NULL,
-    description  TEXT   NOT NULL DEFAULT '',
-    textsearch   tsvector GENERATED ALWAYS AS (
-                       setweight(to_tsvector('english', coalesce(keyword,     '')), 'A')
-                    || setweight(to_tsvector('english', coalesce(name,        '')), 'B')
-                    || setweight(to_tsvector('english', coalesce(description, '')), 'C')
-                 ) STORED
+    id       SERIAL PRIMARY KEY,
+    filename TEXT   NOT NULL UNIQUE,
+    keywords TEXT   NOT NULL
 );
 
 CREATE TABLE lore_entries (
-    id           SERIAL  PRIMARY KEY,
-    topic_id     INTEGER NOT NULL REFERENCES lore_topics(id),
-    seq          INTEGER NOT NULL,
-    keyword      TEXT    NOT NULL DEFAULT '',
-    text         TEXT    NOT NULL,
+    id       SERIAL  PRIMARY KEY,
+    topic_id INTEGER NOT NULL REFERENCES lore_topics(id),
+    seq      INTEGER NOT NULL,
+    flags    BIGINT  NOT NULL DEFAULT 0,
+    body     TEXT    NOT NULL,
     UNIQUE(topic_id, seq)
 );
 
@@ -262,11 +251,10 @@ CREATE TABLE lore_entries (
 -- ---------------------------------------------------------------------------
 
 CREATE TABLE bans (
-    id           SERIAL  PRIMARY KEY,
-    type         INTEGER NOT NULL DEFAULT 0,
-    value        TEXT    NOT NULL,
-    reason       TEXT    NOT NULL DEFAULT '',
-    date         TEXT    NOT NULL DEFAULT ''
+    id        SERIAL  PRIMARY KEY,
+    ban_type  INTEGER NOT NULL DEFAULT 0,
+    address   TEXT    NOT NULL,
+    banned_by TEXT    NOT NULL DEFAULT ''
 );
 
 CREATE TABLE socials (
@@ -282,35 +270,38 @@ CREATE TABLE socials (
 );
 
 CREATE TABLE boards (
-    id           SERIAL  PRIMARY KEY,
-    obj_vnum     INTEGER NOT NULL,
-    name         TEXT    NOT NULL,
-    read_level   INTEGER NOT NULL DEFAULT 0,
-    post_level   INTEGER NOT NULL DEFAULT 0
+    id            SERIAL  PRIMARY KEY,
+    vnum          INTEGER NOT NULL UNIQUE,
+    expiry_days   INTEGER NOT NULL DEFAULT 10,
+    min_read_lev  INTEGER NOT NULL DEFAULT 0,
+    min_write_lev INTEGER NOT NULL DEFAULT 0,
+    clan          INTEGER NOT NULL DEFAULT 0
 );
 
 CREATE TABLE board_messages (
-    id           SERIAL  PRIMARY KEY,
-    board_id     INTEGER NOT NULL REFERENCES boards(id),
-    author       TEXT    NOT NULL DEFAULT '',
-    timestamp    TEXT    NOT NULL DEFAULT '',
-    subject      TEXT    NOT NULL DEFAULT '',
-    text         TEXT    NOT NULL DEFAULT ''
+    id        SERIAL  PRIMARY KEY,
+    board_id  INTEGER NOT NULL REFERENCES boards(id) ON DELETE CASCADE,
+    posted_at BIGINT  NOT NULL,
+    author    TEXT    NOT NULL,
+    title     TEXT    NOT NULL DEFAULT '',
+    body      TEXT    NOT NULL DEFAULT '',
+    seq       INTEGER NOT NULL
 );
 
 CREATE TABLE clans (
-    id           INTEGER PRIMARY KEY,
-    name         TEXT    NOT NULL DEFAULT '',
-    leader       TEXT    NOT NULL DEFAULT '',
-    treasury     INTEGER NOT NULL DEFAULT 0,
-    flags        INTEGER NOT NULL DEFAULT 0
+    id           INTEGER   PRIMARY KEY,
+    name         TEXT      NOT NULL DEFAULT '',
+    war_count    INTEGER   NOT NULL DEFAULT 0,
+    win_count    INTEGER   NOT NULL DEFAULT 0,
+    loss_count   INTEGER   NOT NULL DEFAULT 0,
+    member_count INTEGER   NOT NULL DEFAULT 0,
+    gold         INTEGER   NOT NULL DEFAULT 0,
+    war_matrix   INTEGER[] NOT NULL DEFAULT '{}'
 );
 
 CREATE TABLE rulers (
-    id           SERIAL  PRIMARY KEY,
-    clan_id      INTEGER NOT NULL REFERENCES clans(id),
-    position     TEXT    NOT NULL,
-    player_name  TEXT    NOT NULL
+    id   SERIAL PRIMARY KEY,
+    name TEXT   NOT NULL UNIQUE
 );
 
 CREATE TABLE brands (
@@ -324,24 +315,61 @@ CREATE TABLE brands (
 CREATE TABLE room_marks (
     id           SERIAL  PRIMARY KEY,
     room_vnum    INTEGER NOT NULL,
-    player_name  TEXT    NOT NULL DEFAULT '',
     mark_text    TEXT    NOT NULL
 );
 
 CREATE TABLE corpses (
-    id           SERIAL  PRIMARY KEY,
-    obj_vnum     INTEGER NOT NULL DEFAULT 0,
-    owner        TEXT    NOT NULL DEFAULT '',
-    room_vnum    INTEGER NOT NULL,
-    created_at   TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    contents     JSONB   NOT NULL DEFAULT '[]'
+    id          SERIAL  PRIMARY KEY,
+    where_vnum  INTEGER NOT NULL,
+    nest        INTEGER NOT NULL DEFAULT 0,
+    name        TEXT    NOT NULL,
+    short_descr TEXT    NOT NULL,
+    description TEXT    NOT NULL,
+    vnum        INTEGER NOT NULL DEFAULT 0,
+    extra_flags BIGINT  NOT NULL DEFAULT 0,
+    wear_flags  INTEGER NOT NULL DEFAULT 0,
+    wear_loc    INTEGER NOT NULL DEFAULT -1,
+    class_flags INTEGER NOT NULL DEFAULT 0,
+    item_type   INTEGER NOT NULL DEFAULT 0,
+    weight      INTEGER NOT NULL DEFAULT 0,
+    level       INTEGER NOT NULL DEFAULT 0,
+    timer       INTEGER NOT NULL DEFAULT 0,
+    cost        INTEGER NOT NULL DEFAULT 0,
+    value_0     INTEGER NOT NULL DEFAULT 0,
+    value_1     INTEGER NOT NULL DEFAULT 0,
+    value_2     INTEGER NOT NULL DEFAULT 0,
+    value_3     INTEGER NOT NULL DEFAULT 0,
+    value_4     INTEGER NOT NULL DEFAULT 0,
+    value_5     INTEGER NOT NULL DEFAULT 0,
+    value_6     INTEGER NOT NULL DEFAULT 0,
+    value_7     INTEGER NOT NULL DEFAULT 0,
+    value_8     INTEGER NOT NULL DEFAULT 0,
+    value_9     INTEGER NOT NULL DEFAULT 0,
+    parent_id   INTEGER REFERENCES corpses(id)
 );
 
--- Key-value store for global server state and messages
+-- Game configuration singleton (id must always be 1)
 CREATE TABLE sysdata (
-    key          TEXT PRIMARY KEY,
-    value        TEXT NOT NULL DEFAULT ''
+    id          INTEGER PRIMARY KEY DEFAULT 1 CHECK (id = 1),
+    mud_name    TEXT    NOT NULL DEFAULT '',
+    admin_email TEXT    NOT NULL DEFAULT '',
+    login_msg   TEXT    NOT NULL DEFAULT '',
+    motd        TEXT    NOT NULL DEFAULT '',
+    welcome     TEXT    NOT NULL DEFAULT '',
+    news        TEXT    NOT NULL DEFAULT '',
+    int_val_1   INTEGER NOT NULL DEFAULT 0,
+    int_val_2   INTEGER NOT NULL DEFAULT 0,
+    bln_val_0   INTEGER NOT NULL DEFAULT 0,
+    bln_val_1   INTEGER NOT NULL DEFAULT 0,
+    bln_val_2   INTEGER NOT NULL DEFAULT 0,
+    bln_val_3   INTEGER NOT NULL DEFAULT 0,
+    bln_val_4   INTEGER NOT NULL DEFAULT 0,
+    bln_val_5   INTEGER NOT NULL DEFAULT 0,
+    bln_val_6   INTEGER NOT NULL DEFAULT 0,
+    bln_val_7   INTEGER NOT NULL DEFAULT 0
 );
+
+INSERT INTO sysdata (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 -- ---------------------------------------------------------------------------
 -- Players
@@ -447,13 +475,8 @@ CREATE INDEX ON object_extra_descs(obj_vnum);
 CREATE INDEX ON object_affects(obj_vnum);
 CREATE INDEX ON resets(area_id, seq);
 CREATE INDEX ON lore_entries(topic_id);
-CREATE INDEX ON board_messages(board_id);
-CREATE INDEX ON corpses(room_vnum);
-
--- Full-text search (weighted: keyword=A, title/name=B, body=C)
-CREATE INDEX help_entries_textsearch_idx  ON help_entries  USING GIN (textsearch);
-CREATE INDEX shelp_entries_textsearch_idx ON shelp_entries USING GIN (textsearch);
-CREATE INDEX lore_topics_textsearch_idx   ON lore_topics   USING GIN (textsearch);
+CREATE INDEX ON board_messages(board_id, seq);
+CREATE INDEX ON corpses(where_vnum);
 
 -- ---------------------------------------------------------------------------
 -- Schema version
@@ -471,3 +494,5 @@ INSERT INTO schema_version (version, description)
     VALUES (3, 'Add stored tsvector columns for weighted full-text search');
 INSERT INTO schema_version (version, description)
     VALUES (4, 'Align brands with acktng canonical schema (brand_date TEXT per PR #920); add keep_chests tables');
+INSERT INTO schema_version (version, description)
+    VALUES (5, 'Align all tables with canonical acktng schema.sql proposal');
