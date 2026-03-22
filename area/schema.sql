@@ -77,7 +77,7 @@ CREATE TABLE mobiles (
     race          INTEGER NOT NULL DEFAULT 0,
     position      INTEGER NOT NULL DEFAULT 0,
     skills        INTEGER NOT NULL DEFAULT 0,
-    "cast"        INTEGER NOT NULL DEFAULT 0,
+    cast_flags    INTEGER NOT NULL DEFAULT 0,
     def           INTEGER NOT NULL DEFAULT 0,
     strong_magic  INTEGER NOT NULL DEFAULT 0,
     weak_magic    INTEGER NOT NULL DEFAULT 0,
@@ -496,3 +496,5 @@ INSERT INTO schema_version (version, description)
     VALUES (4, 'Align brands with acktng canonical schema (brand_date TEXT per PR #920); add keep_chests tables');
 INSERT INTO schema_version (version, description)
     VALUES (5, 'Align all tables with canonical acktng schema.sql proposal');
+INSERT INTO schema_version (version, description)
+    VALUES (6, 'Rename mobiles."cast" to cast_flags to match canonical schema');
