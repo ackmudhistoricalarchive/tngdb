@@ -1,0 +1,27 @@
+[Unit]
+Description=ACK!TNG Database API Server
+After=network.target postgresql.service
+Requires=postgresql.service
+
+[Service]
+Type=simple
+User=tngapi
+Group=tngapi
+WorkingDirectory=/opt/tngdb
+EnvironmentFile=/etc/tngdb-api.env
+ExecStart=/opt/tngdb/venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=tngdb-api
+
+# Harden the service
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/tngdb
+
+[Install]
+WantedBy=multi-user.target
