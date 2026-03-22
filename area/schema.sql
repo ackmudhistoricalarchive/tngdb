@@ -211,7 +211,12 @@ CREATE TABLE help_entries (
     keyword      TEXT    NOT NULL,
     title        TEXT    NOT NULL DEFAULT '',
     level        INTEGER NOT NULL DEFAULT 0,
-    text         TEXT    NOT NULL
+    text         TEXT    NOT NULL,
+    textsearch   tsvector GENERATED ALWAYS AS (
+                       setweight(to_tsvector('english', coalesce(keyword, '')), 'A')
+                    || setweight(to_tsvector('english', coalesce(title,   '')), 'B')
+                    || setweight(to_tsvector('english', coalesce(text,    '')), 'C')
+                 ) STORED
 );
 
 CREATE TABLE shelp_entries (
@@ -219,7 +224,12 @@ CREATE TABLE shelp_entries (
     keyword      TEXT    NOT NULL,
     title        TEXT    NOT NULL DEFAULT '',
     level        INTEGER NOT NULL DEFAULT 0,
-    text         TEXT    NOT NULL
+    text         TEXT    NOT NULL,
+    textsearch   tsvector GENERATED ALWAYS AS (
+                       setweight(to_tsvector('english', coalesce(keyword, '')), 'A')
+                    || setweight(to_tsvector('english', coalesce(title,   '')), 'B')
+                    || setweight(to_tsvector('english', coalesce(text,    '')), 'C')
+                 ) STORED
 );
 
 -- ---------------------------------------------------------------------------
@@ -230,7 +240,12 @@ CREATE TABLE lore_topics (
     id           SERIAL PRIMARY KEY,
     name         TEXT   NOT NULL UNIQUE,
     keyword      TEXT   NOT NULL,
-    description  TEXT   NOT NULL DEFAULT ''
+    description  TEXT   NOT NULL DEFAULT '',
+    textsearch   tsvector GENERATED ALWAYS AS (
+                       setweight(to_tsvector('english', coalesce(keyword,     '')), 'A')
+                    || setweight(to_tsvector('english', coalesce(name,        '')), 'B')
+                    || setweight(to_tsvector('english', coalesce(description, '')), 'C')
+                 ) STORED
 );
 
 CREATE TABLE lore_entries (
@@ -389,10 +404,10 @@ CREATE INDEX ON lore_entries(topic_id);
 CREATE INDEX ON board_messages(board_id);
 CREATE INDEX ON corpses(room_vnum);
 
--- Full-text keyword search for help/shelp/lore
-CREATE INDEX ON help_entries  USING GIN (to_tsvector('english', keyword));
-CREATE INDEX ON shelp_entries USING GIN (to_tsvector('english', keyword));
-CREATE INDEX ON lore_topics   USING GIN (to_tsvector('english', keyword));
+-- Full-text search (weighted: keyword=A, title/name=B, body=C)
+CREATE INDEX help_entries_textsearch_idx  ON help_entries  USING GIN (textsearch);
+CREATE INDEX shelp_entries_textsearch_idx ON shelp_entries USING GIN (textsearch);
+CREATE INDEX lore_topics_textsearch_idx   ON lore_topics   USING GIN (textsearch);
 
 -- ---------------------------------------------------------------------------
 -- Schema version
@@ -406,3 +421,5 @@ CREATE TABLE schema_version (
 
 INSERT INTO schema_version (version, description)
     VALUES (2, 'Align schema with database-schema-areas proposal');
+INSERT INTO schema_version (version, description)
+    VALUES (3, 'Add stored tsvector columns for weighted full-text search');
