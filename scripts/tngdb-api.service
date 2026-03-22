@@ -9,6 +9,7 @@ User=tngapi
 Group=tngapi
 WorkingDirectory=/opt/tngdb
 EnvironmentFile=/etc/tngdb-api.env
+ExecStartPre=/usr/bin/pg_isready -h localhost -t 30
 ExecStart=/opt/tngdb/venv/bin/uvicorn api.main:app --host 127.0.0.1 --port 8000
 Restart=on-failure
 RestartSec=5
