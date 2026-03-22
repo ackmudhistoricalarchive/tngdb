@@ -90,19 +90,26 @@ async def list_helps(
     keyword: Optional[str] = Query(None, description="Full-text keyword search"),
     level: Optional[int] = Query(None, description="Restrict to entries with level ≤ n"),
 ):
-    """List all help entries, with optional keyword and level filters."""
+    """List all help entries, with optional keyword and level filters.
+
+    When *keyword* is supplied results are ordered by relevance (ts_rank),
+    with matches in the keyword tag ranked above title and body-text matches.
+    """
     conditions = []
     params: list = []
+    order = "id"
 
     if keyword:
         params.append(keyword)
-        conditions.append(f"to_tsvector('english', keyword) @@ plainto_tsquery('english', ${len(params)})")
+        n = len(params)
+        conditions.append(f"textsearch @@ plainto_tsquery('english', ${n})")
+        order = f"ts_rank(textsearch, plainto_tsquery('english', ${n})) DESC, id"
     if level is not None:
         params.append(level)
         conditions.append(f"level <= ${len(params)}")
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    sql = f"SELECT id, keyword, title, level, text FROM help_entries {where} ORDER BY id"
+    sql = f"SELECT id, keyword, title, level, text FROM help_entries {where} ORDER BY {order}"
 
     async with pool().acquire() as conn:
         rows = await conn.fetch(sql, *params)
@@ -131,19 +138,26 @@ async def list_shelps(
     keyword: Optional[str] = Query(None, description="Full-text keyword search"),
     level: Optional[int] = Query(None, description="Restrict to entries with level ≤ n"),
 ):
-    """List all skill-help entries, with optional keyword and level filters."""
+    """List all skill-help entries, with optional keyword and level filters.
+
+    When *keyword* is supplied results are ordered by relevance (ts_rank),
+    with matches in the keyword tag ranked above title and body-text matches.
+    """
     conditions = []
     params: list = []
+    order = "id"
 
     if keyword:
         params.append(keyword)
-        conditions.append(f"to_tsvector('english', keyword) @@ plainto_tsquery('english', ${len(params)})")
+        n = len(params)
+        conditions.append(f"textsearch @@ plainto_tsquery('english', ${n})")
+        order = f"ts_rank(textsearch, plainto_tsquery('english', ${n})) DESC, id"
     if level is not None:
         params.append(level)
         conditions.append(f"level <= ${len(params)}")
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    sql = f"SELECT id, keyword, title, level, text FROM shelp_entries {where} ORDER BY id"
+    sql = f"SELECT id, keyword, title, level, text FROM shelp_entries {where} ORDER BY {order}"
 
     async with pool().acquire() as conn:
         rows = await conn.fetch(sql, *params)
@@ -185,12 +199,16 @@ async def _fetch_lore_topic(conn: asyncpg.Connection, topic_id: int) -> dict | N
 async def list_lores(
     keyword: Optional[str] = Query(None, description="Full-text keyword search"),
 ):
-    """List all lore topics (each with nested entries), with optional keyword filter."""
+    """List all lore topics (each with nested entries), with optional keyword filter.
+
+    When *keyword* is supplied results are ordered by relevance (ts_rank),
+    with matches in keyword tags ranked above name and description matches.
+    """
     if keyword:
         sql = (
             "SELECT id FROM lore_topics "
-            "WHERE to_tsvector('english', keyword) @@ plainto_tsquery('english', $1) "
-            "ORDER BY id"
+            "WHERE textsearch @@ plainto_tsquery('english', $1) "
+            "ORDER BY ts_rank(textsearch, plainto_tsquery('english', $1)) DESC, id"
         )
         params = [keyword]
     else:
