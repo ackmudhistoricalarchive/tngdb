@@ -77,6 +77,20 @@ SQL
 # ---------------------------------------------------------------------------
 # Done
 # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Ensure the PostgreSQL instance service is enabled so it survives reboots.
+# The meta postgresql.service (a oneshot /bin/true) is enabled by the apt
+# postinst, but it does NOT pull in the real instance service on boot.
+# We have to enable postgresql@<version>-<cluster>.service explicitly.
+# ---------------------------------------------------------------------------
+PG_VERSION="$(pg_lsclusters --no-header 2>/dev/null | awk 'NR==1 {print $1}')"
+PG_CLUSTER_NAME="$(pg_lsclusters --no-header 2>/dev/null | awk 'NR==1 {print $2}')"
+if [ -n "$PG_VERSION" ] && [ -n "$PG_CLUSTER_NAME" ]; then
+    PG_INSTANCE_UNIT="postgresql@${PG_VERSION}-${PG_CLUSTER_NAME}.service"
+    systemctl enable "$PG_INSTANCE_UNIT" || true
+    systemctl start  "$PG_INSTANCE_UNIT" || pg_ctlcluster "$PG_VERSION" "$PG_CLUSTER_NAME" start || true
+fi
+
 if [ "${GENERATED:-0}" = "1" ]; then
     echo ""
     echo "Setup complete."
