@@ -72,7 +72,7 @@ apt-get install -y python3 python3-venv python3-pip
 # Dedicated service user
 # ---------------------------------------------------------------------------
 if ! id "$SERVICE_USER" >/dev/null 2>&1; then
-    useradd --system --no-create-home --shell /usr/sbin/nologin "$SERVICE_USER"
+    useradd --system --create-home --shell /usr/sbin/nologin "$SERVICE_USER"
 fi
 
 # ---------------------------------------------------------------------------
