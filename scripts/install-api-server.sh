@@ -59,6 +59,10 @@ if [ -z "$DATABASE_URL" ] && [ -f "$REPO_DIR/area/db.conf" ]; then
 fi
 
 if [ -z "$DATABASE_URL" ]; then
+    echo "WARNING: area/db.conf not found and --database-url not supplied." >&2
+    echo "         Falling back to postgres://ack:@localhost/acktng (empty password)." >&2
+    echo "         If the 'ack' role has a password, the service will fail to start." >&2
+    echo "         Run scripts/fix-api-server-db-password.sh to correct this later." >&2
     DATABASE_URL="postgres://ack:@localhost/acktng"
 fi
 
