@@ -118,6 +118,18 @@ fi
 # Update WorkingDirectory to match install dir
 sed -i "s|WorkingDirectory=.*|WorkingDirectory=$INSTALL_DIR|" "$UNIT_FILE"
 
+# Replace the generic 'postgresql.service' dependency with the concrete instance
+# unit (e.g. postgresql@16-main.service).  The meta postgresql.service is a
+# oneshot /bin/true that succeeds immediately and does NOT guarantee the real
+# PostgreSQL process is running; the instance unit is Type=forking and only
+# becomes active once PostgreSQL is accepting connections.
+PG_VER="$(pg_lsclusters --no-header 2>/dev/null | awk 'NR==1 {print $1}')"
+PG_CL="$(pg_lsclusters --no-header 2>/dev/null | awk 'NR==1 {print $2}')"
+if [ -n "$PG_VER" ] && [ -n "$PG_CL" ]; then
+    PG_UNIT="postgresql@${PG_VER}-${PG_CL}.service"
+    sed -i "s/postgresql\.service/$PG_UNIT/g" "$UNIT_FILE"
+fi
+
 systemctl daemon-reload
 systemctl enable "$UNIT_NAME"
 systemctl restart "$UNIT_NAME"
