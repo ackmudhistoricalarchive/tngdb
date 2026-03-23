@@ -479,6 +479,35 @@ CREATE INDEX ON board_messages(board_id, seq);
 CREATE INDEX ON corpses(where_vnum);
 
 -- ---------------------------------------------------------------------------
+-- Quest templates
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE quest_templates (
+    id                       INTEGER PRIMARY KEY,
+    title                    TEXT    NOT NULL,
+    prerequisite_template_id INTEGER NOT NULL DEFAULT -1,
+    type                     INTEGER NOT NULL DEFAULT 0,
+    num_targets              INTEGER NOT NULL DEFAULT 0,
+    target_vnums             INTEGER[] NOT NULL DEFAULT '{}',
+    kill_needed              INTEGER NOT NULL DEFAULT 0,
+    min_level                INTEGER NOT NULL DEFAULT 0,
+    max_level                INTEGER NOT NULL DEFAULT 170,
+    offerer_vnum             INTEGER NOT NULL DEFAULT 0,
+    reward_gold              INTEGER NOT NULL DEFAULT 0,
+    reward_qp                INTEGER NOT NULL DEFAULT 0,
+    reward_exp               INTEGER NOT NULL DEFAULT 0,
+    accept_message           TEXT    NOT NULL DEFAULT '',
+    completion_message       TEXT    NOT NULL DEFAULT '',
+    reward_obj_short         TEXT    NOT NULL DEFAULT '',
+    reward_obj_name          TEXT    NOT NULL DEFAULT '',
+    reward_obj_long          TEXT    NOT NULL DEFAULT '',
+    reward_obj_wear_flags    INTEGER NOT NULL DEFAULT 0,
+    reward_obj_extra_flags   INTEGER NOT NULL DEFAULT 0,
+    reward_obj_weight        INTEGER NOT NULL DEFAULT 0,
+    reward_obj_item_apply    INTEGER NOT NULL DEFAULT 0
+);
+
+-- ---------------------------------------------------------------------------
 -- Schema version
 -- ---------------------------------------------------------------------------
 
@@ -498,3 +527,5 @@ INSERT INTO schema_version (version, description)
     VALUES (5, 'Align all tables with canonical acktng schema.sql proposal');
 INSERT INTO schema_version (version, description)
     VALUES (6, 'Rename mobiles."cast" to cast_flags to match canonical schema');
+INSERT INTO schema_version (version, description)
+    VALUES (7, 'Add quest_templates table');
