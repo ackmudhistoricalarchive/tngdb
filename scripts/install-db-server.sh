@@ -10,7 +10,14 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-SCHEMA="$SCRIPT_DIR/../area/schema.sql"
+SCHEMA="$SCRIPT_DIR/../../acktng/area/schema.sql"
+
+if [ ! -f "$SCHEMA" ]; then
+    echo "ERROR: cannot find acktng schema at $SCHEMA" >&2
+    echo "       Make sure acktng is cloned alongside tngdb (e.g. via aicli setup.sh)." >&2
+    exit 1
+fi
+
 PG_USER=ack
 PG_DB=acktng
 PG_PASS=
