@@ -90,6 +90,19 @@ class HelpEntry(BaseModel):
     text: str
 
 
+class SkillSummary(BaseModel):
+    sn: int
+    name: str
+    has_script: bool
+
+
+class SkillDetail(BaseModel):
+    sn: int
+    name: str
+    has_script: bool
+    script_source: Optional[str]
+
+
 class LoreEntryItem(BaseModel):
     id: int
     seq: int
@@ -257,3 +270,54 @@ async def get_lore(topic_id: int):
     if topic is None:
         raise HTTPException(status_code=404, detail="Lore topic not found")
     return topic
+
+
+# ---------------------------------------------------------------------------
+# Skills
+# ---------------------------------------------------------------------------
+
+@app.get("/skills", response_model=List[SkillSummary], tags=["skills"])
+async def list_skills(
+    scripted: Optional[bool] = Query(None, description="Filter to only scripted (true) or unscripted (false) skills"),
+    name: Optional[str] = Query(None, description="Case-insensitive substring match on name"),
+):
+    """List all skills and spells ordered by sn.
+
+    *scripted=true* returns only entries that have a Lua script_source set.
+    *scripted=false* returns only entries without a script (dispatched via C).
+    *name* filters by case-insensitive substring match.
+    """
+    conditions = []
+    params: list = []
+
+    if scripted is True:
+        conditions.append("script_source IS NOT NULL AND script_source <> ''")
+    elif scripted is False:
+        conditions.append("(script_source IS NULL OR script_source = '')")
+
+    if name is not None:
+        params.append(f"%{name}%")
+        conditions.append(f"name ILIKE ${len(params)}")
+
+    where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
+    sql = f"SELECT sn, name, (script_source IS NOT NULL AND script_source <> '') AS has_script FROM skills {where} ORDER BY sn"
+
+    async with pool().acquire() as conn:
+        rows = await conn.fetch(sql, *params)
+    return [dict(r) for r in rows]
+
+
+@app.get("/skills/{sn}", response_model=SkillDetail, tags=["skills"])
+async def get_skill(sn: int):
+    """Fetch a single skill or spell by its sn (skill number).
+
+    Returns the full *script_source* if a Lua script is set.
+    """
+    async with pool().acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT sn, name, (script_source IS NOT NULL AND script_source <> '') AS has_script, script_source FROM skills WHERE sn = $1",
+            sn,
+        )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Skill not found")
+    return dict(row)
