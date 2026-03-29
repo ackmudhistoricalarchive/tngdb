@@ -60,10 +60,16 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="ACK!TNG DB API",
-    description="Read-only API for game helps, skill-helps, and lores.",
+    description="Read-only API for game helps, skill-helps, lores, and skills.",
     version="1.0.0",
     lifespan=lifespan,
 )
+
+
+@app.get("/health", tags=["health"])
+async def health():
+    """Health check endpoint for monitoring."""
+    return {"status": "ok"}
 
 
 def pool() -> asyncpg.Pool:
