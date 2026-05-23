@@ -137,16 +137,20 @@ async def list_helps(
     order = "id"
 
     if keyword:
-        params.append(keyword)
+        params.append(f"%{keyword}%")
         n = len(params)
-        conditions.append(f"textsearch @@ plainto_tsquery('english', ${n})")
-        order = f"ts_rank(textsearch, plainto_tsquery('english', ${n})) DESC, id"
+        conditions.append(
+            f"(keywords ILIKE ${n} OR filename ILIKE ${n} OR body ILIKE ${n})"
+        )
     if level is not None:
         params.append(level)
         conditions.append(f"level <= ${len(params)}")
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    sql = f"SELECT id, keyword, title, level, text FROM help_entries {where} ORDER BY {order}"
+    sql = (
+        "SELECT id, keywords AS keyword, filename AS title, level, body AS text "
+        f"FROM help_entries {where} ORDER BY {order}"
+    )
 
     async with pool().acquire() as conn:
         rows = await conn.fetch(sql, *params)
@@ -158,7 +162,8 @@ async def get_help(entry_id: int):
     """Fetch a single help entry by ID."""
     async with pool().acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, keyword, title, level, text FROM help_entries WHERE id = $1",
+            "SELECT id, keywords AS keyword, filename AS title, level, body AS text "
+            "FROM help_entries WHERE id = $1",
             entry_id,
         )
     if row is None:
@@ -185,16 +190,20 @@ async def list_shelps(
     order = "id"
 
     if keyword:
-        params.append(keyword)
+        params.append(f"%{keyword}%")
         n = len(params)
-        conditions.append(f"textsearch @@ plainto_tsquery('english', ${n})")
-        order = f"ts_rank(textsearch, plainto_tsquery('english', ${n})) DESC, id"
+        conditions.append(
+            f"(keywords ILIKE ${n} OR filename ILIKE ${n} OR body ILIKE ${n})"
+        )
     if level is not None:
         params.append(level)
         conditions.append(f"level <= ${len(params)}")
 
     where = ("WHERE " + " AND ".join(conditions)) if conditions else ""
-    sql = f"SELECT id, keyword, title, level, text FROM shelp_entries {where} ORDER BY {order}"
+    sql = (
+        "SELECT id, keywords AS keyword, filename AS title, level, body AS text "
+        f"FROM shelp_entries {where} ORDER BY {order}"
+    )
 
     async with pool().acquire() as conn:
         rows = await conn.fetch(sql, *params)
@@ -206,7 +215,8 @@ async def get_shelp(entry_id: int):
     """Fetch a single skill-help entry by ID."""
     async with pool().acquire() as conn:
         row = await conn.fetchrow(
-            "SELECT id, keyword, title, level, text FROM shelp_entries WHERE id = $1",
+            "SELECT id, keywords AS keyword, filename AS title, level, body AS text "
+            "FROM shelp_entries WHERE id = $1",
             entry_id,
         )
     if row is None:
@@ -220,13 +230,15 @@ async def get_shelp(entry_id: int):
 
 async def _fetch_lore_topic(conn: asyncpg.Connection, topic_id: int) -> dict | None:
     topic = await conn.fetchrow(
-        "SELECT id, name, keyword, description FROM lore_topics WHERE id = $1",
+        "SELECT id, filename AS name, keywords AS keyword, ''::text AS description "
+        "FROM lore_topics WHERE id = $1",
         topic_id,
     )
     if topic is None:
         return None
     entries = await conn.fetch(
-        "SELECT id, seq, keyword, text FROM lore_entries WHERE topic_id = $1 ORDER BY seq",
+        "SELECT id, seq, flags::text AS keyword, body AS text "
+        "FROM lore_entries WHERE topic_id = $1 ORDER BY seq",
         topic_id,
     )
     return {**dict(topic), "entries": [dict(e) for e in entries]}
@@ -242,12 +254,13 @@ async def list_lores(
     with matches in keyword tags ranked above name and description matches.
     """
     if keyword:
+        pattern = f"%{keyword}%"
         sql = (
             "SELECT id FROM lore_topics "
-            "WHERE textsearch @@ plainto_tsquery('english', $1) "
-            "ORDER BY ts_rank(textsearch, plainto_tsquery('english', $1)) DESC, id"
+            "WHERE keywords ILIKE $1 OR filename ILIKE $1 "
+            "ORDER BY id"
         )
-        params = [keyword]
+        params = [pattern]
     else:
         sql = "SELECT id FROM lore_topics ORDER BY id"
         params = []
